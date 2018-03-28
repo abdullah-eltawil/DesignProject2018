@@ -1,19 +1,12 @@
 /*
 
- MSE 2202 MSEBot base code for Labs 3 and 4
- Language: Arduino
- Authors: Michael Naish and Eugen Porter
- Date: 16/01/17
- 
- Rev 1 - Initial version
- Rev 2 - Update for MSEduino v. 2
+Doolz & Joy
  
  */
 
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
-#include <CharliePlexM.h>
 #include <Wire.h>
 #include <I2CEncoder.h>
 
