@@ -18,19 +18,14 @@ Servo servo_LeftMotor2;
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
 
-// Uncomment keywords to enable debugging output
-
-//#define DEBUG_MODE_DISPLAY
 //#define DEBUG_MOTORS
-//#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
 //#define DEBUG_ULTRASONIC
-//#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 
 boolean bt_Motors_Enabled = true;
 
-//port pin constants
+//Port pin constants
 const int ci_UltrasonicF_Ping = 4;   //input plug (echo)
 const int ci_UltrasonicF_Data = 5;   //output plug (trig)
 const int ci_UltrasonicR_Ping = 2;   //input plug (echo)
@@ -52,9 +47,9 @@ const int ci_I2C_SDA = A4;         // I2C data = white
 const int ci_I2C_SCL = A5;         // I2C clock = yellow
 
 
-//constants
+//Constants
 
-// EEPROM addresses
+//EEPROM addresses
 const int ci_Left_Motor_Offset_Address_L = 12;
 const int ci_Left_Motor_Offset_Address_H = 13;
 const int ci_Right_Motor_Offset_Address_L = 14;
@@ -66,7 +61,7 @@ const int ci_Right_Motor_Stop = 1500;
 const int ci_Motor_Calibration_Cycles = 3;
 const int ci_Motor_Calibration_Time = 5000;
 
-//variables
+//Variables
 byte b_LowByte;
 byte b_HighByte;
 unsigned long ul_Echo_Time;
@@ -213,12 +208,6 @@ void loop()
         ui_Left_Motor_Speed = constrain(1800 + ui_Left_Motor_Offset, 1600, 2100);
         ui_Right_Motor_Speed = constrain(1800 + ui_Right_Motor_Offset, 1600, 2100);
         readUltrasonic();
-
-       /***************************************************************************************
-         Add line tracking code here. 
-         Adjust motor speed according to information from line tracking sensors and 
-         possibly encoder counts.
-       /*************************************************************************************/
 
         if(bt_Motors_Enabled)
         {
