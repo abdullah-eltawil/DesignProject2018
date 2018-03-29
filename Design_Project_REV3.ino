@@ -10,10 +10,8 @@ Doolz & Joy
 #include <Wire.h>
 #include <I2CEncoder.h>
 
-Servo servo_RightMotor1;
-Servo servo_RightMotor2;
-Servo servo_LeftMotor1;
-Servo servo_LeftMotor2;
+Servo servo_RightMotor;
+Servo servo_LeftMotor;
 
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
@@ -26,20 +24,18 @@ I2CEncoder encoder_LeftMotor;
 boolean bt_Motors_Enabled = true;
 
 //Port pin constants
-const int ci_UltrasonicF_Ping = 4;   //input plug (echo)
-const int ci_UltrasonicF_Data = 5;   //output plug (trig)
-const int ci_UltrasonicR_Ping = 2;   //input plug (echo)
-const int ci_UltrasonicR_Data = 3;   //output plug (trig)
+const int ci_UltrasonicF_Ping = 4;   //input plug (trig)
+const int ci_UltrasonicF_Data = 5;   //output plug (echo)
+const int ci_UltrasonicR_Ping = 2;   //input plug (trig)
+const int ci_UltrasonicR_Data = 3;   //output plug (echo)
 
 long durationFront,durationBack;
 double distanceFront,distanceBack;
 
 const int ci_Mode_Button = 10;
 
-const int ci_Right_Motor1 = 6;
-const int ci_Right_Motor2 = 7;
-const int ci_Left_Motor1 = 8;
-const int ci_Left_Motor2 = 9;
+const int ci_Right_Motor = 8;
+const int ci_Left_Motor = 7;
 
 const int ci_Motor_Enable_Switch = 12;
 
@@ -110,15 +106,11 @@ void setup() {
   
 
   // set up drive motors
-  pinMode(ci_Right_Motor1, OUTPUT);
-  servo_RightMotor1.attach(ci_Right_Motor1);
-  pinMode(ci_Right_Motor2, OUTPUT);
-  servo_RightMotor2.attach(ci_Right_Motor2);
+  pinMode(ci_Right_Motor, OUTPUT);
+  servo_RightMotor.attach(ci_Right_Motor);
   
-  pinMode(ci_Left_Motor1, OUTPUT);
-  servo_LeftMotor1.attach(ci_Left_Motor1);
-  pinMode(ci_Left_Motor2, OUTPUT);
-  servo_LeftMotor2.attach(ci_Left_Motor2);
+  pinMode(ci_Left_Motor, OUTPUT);
+  servo_LeftMotor.attach(ci_Left_Motor);
 
   // set up motor enable switch
   //pinMode(ci_Motor_Enable_Switch, INPUT);
@@ -177,11 +169,9 @@ void loop()
     case 0:    //Robot stopped
     {
       readUltrasonic();
-      servo_LeftMotor1.writeMicroseconds(ci_Left_Motor_Stop);
-      servo_LeftMotor2.writeMicroseconds(ci_Left_Motor_Stop); 
+      servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
  
-      servo_RightMotor1.writeMicroseconds(ci_Right_Motor_Stop);
-      servo_RightMotor2.writeMicroseconds(ci_Right_Motor_Stop);
+      servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
 
       encoder_LeftMotor.zero();
       encoder_RightMotor.zero();
@@ -211,21 +201,16 @@ void loop()
 
         if(bt_Motors_Enabled)
         {
-          servo_LeftMotor1.writeMicroseconds(ui_Left_Motor_Speed);
-          servo_LeftMotor2.writeMicroseconds(ui_Left_Motor_Speed);
+          servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
 
-          servo_RightMotor1.writeMicroseconds(ui_Right_Motor_Speed);
-          servo_RightMotor2.writeMicroseconds(ui_Right_Motor_Speed);
+          servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
 
         }
         else
         {  
-          servo_LeftMotor1.writeMicroseconds(ci_Left_Motor_Stop); 
-          servo_LeftMotor2.writeMicroseconds(ci_Left_Motor_Stop); 
+          servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
 
-          servo_RightMotor1.writeMicroseconds(ci_Right_Motor_Stop); 
-          servo_RightMotor2.writeMicroseconds(ci_Right_Motor_Stop); 
-
+          servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop); 
         }
 #ifdef DEBUG_MOTORS
         Serial.print("Motors enabled: ");
@@ -253,18 +238,14 @@ void loop()
           encoder_RightMotor.zero();
           ul_Calibration_Time = millis();
           
-          servo_LeftMotor1.writeMicroseconds(ui_Motors_Speed);
-          servo_LeftMotor2.writeMicroseconds(ui_Motors_Speed);
-          servo_RightMotor1.writeMicroseconds(ui_Motors_Speed);
-          servo_RightMotor2.writeMicroseconds(ui_Motors_Speed);
+          servo_LeftMotor.writeMicroseconds(ui_Motors_Speed);
+          servo_RightMotor.writeMicroseconds(ui_Motors_Speed);
         }
         else if((millis() - ul_Calibration_Time) > ci_Motor_Calibration_Time) 
         {
-          servo_LeftMotor1.writeMicroseconds(ci_Left_Motor_Stop);
-          servo_LeftMotor2.writeMicroseconds(ci_Left_Motor_Stop);  
-          servo_RightMotor1.writeMicroseconds(ci_Right_Motor_Stop); 
-          servo_RightMotor2.writeMicroseconds(ci_Right_Motor_Stop); 
-          
+          servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+          servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop); 
+         
           l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
           l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
           if(l_Left_Motor_Position > l_Right_Motor_Position)
