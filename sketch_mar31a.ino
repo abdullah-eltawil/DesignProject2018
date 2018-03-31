@@ -23,6 +23,7 @@ I2CEncoder encoder_LeftMotor;
 
 boolean bt_Motors_Enabled = true;
 boolean turnSwitch = LOW;
+boolean isDistanceOk, isWallAhead, isParallel, isOvershoot;
 
 //Port pin constants
 const int ci_UltrasonicF_Ping = 4;   //input plug (trig)
@@ -34,12 +35,12 @@ const int ci_UltrasonicT_Echo = 2; //echo
 const int ci_UltrasonicT_Trig = 3; //trig
 
 long durationFront, durationBack, durationT;
-double distanceFront, distanceBack, distanceT;
+double distanceFront, distanceBack, distanceT, avgDistance;
 
 const int ci_Mode_Button = 10;
 
-const int ci_Right_Motor = 9;
-const int ci_Left_Motor = 8;
+const int ci_Right_Motor = 8;
+const int ci_Left_Motor = 9;
 
 const int ci_Motor_Enable_Switch = 12;
 
@@ -61,6 +62,8 @@ const int ci_Right_Motor_Stop = 1500;
 const int ci_Motor_Calibration_Cycles = 3;
 const int ci_Motor_Calibration_Time = 5000;
 const int ci_distance_from_wall = 20;
+int state = 0 ;
+
 
 //Variables
 byte b_LowByte;
@@ -173,7 +176,7 @@ void loop()
   switch (ui_Robot_State_Index)
   {
     case 0:    //Robot stopped
-      {
+      { Serial.println(ui_Robot_State_Index);
         //readUltrasonicT();
         //readUltrasonic();
         servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
@@ -183,6 +186,7 @@ void loop()
         encoder_LeftMotor.zero();
         encoder_RightMotor.zero();
         ui_Mode_Indicator_Index = 0;
+        //  Serial.println("0");
         break;
       }
 
@@ -200,26 +204,26 @@ void loop()
           Serial.print(", R: ");
           Serial.println(l_Right_Motor_Position);
 #endif
+          Serial.println(ui_Robot_State_Index);
+          goStraight();
 
-          // set motor speeds
-          ui_Left_Motor_Speed = 1800;//constrain(1800 + ui_Left_Motor_Offset, 1600, 2100);
-          ui_Right_Motor_Speed = 1800;//constrain(1800 + ui_Right_Motor_Offset, 1600, 2100);
+          //keepDistance();
+
+          readUltrasonicT();
+          if (isWallAhead)
+          {
+            ui_Robot_State_Index = 2;
+            break;
+          }
+
+          readUltrasonic();
+          if (isDistanceOk)
+          {
+            stayParallel();
+          }
 
           servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
           servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-
-          if (readUltrasonic() == 1)
-          turnRight();
-          
-          else if (readUltrasonic() == 2)
-          turnLeft();
-
-          else if (readUltrasonic() == 3)
-          goStraight ();
-        
-          if (readUltrasonicT() == 1)
-          ui_Robot_State_Index =2;
-          
 
 #ifdef DEBUG_MOTORS
           Serial.print("Motors enabled: ");
@@ -233,22 +237,35 @@ void loop()
 #endif
           ui_Mode_Indicator_Index = 1;
         }
+        // Serial.println("1");
         break;
       }
 
 
     case 2:
       {
+        Serial.println(ui_Robot_State_Index);
         //readUltrasonicT();
         ui_Left_Motor_Speed = 1200;
         ui_Right_Motor_Speed = 1800;
-        
-        servo_LeftMotor.writeMicroseconds( ui_Left_Motor_Speed);
-        servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-       
-       if ((readUltrasonic()==3) && (readUltrasonicT()== 2))
-        ui_Robot_State_Index =1;
 
+        servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+        servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+
+        readUltrasonic();
+
+        if (isParallel)
+        {
+          ui_Robot_State_Index = 1;
+
+          Serial.print ("Parallel: ");
+          Serial.println(isParallel);
+          Serial.print ("Overshoot: ");
+          Serial.println(isOvershoot);
+
+        }
+
+        //Serial.println("2");
       }
 
     case 3:    //Calibrate motor straightness after 3 seconds.
@@ -306,14 +323,15 @@ void loop()
 #endif
           ui_Mode_Indicator_Index = 2;
         }
+
         break;
       }
   }
-  Serial.println(ui_Robot_State_Index);
+  //Serial.println(ui_Robot_State_Index);
 }
-
-int readUltrasonic()
+void readUltrasonic()
 {
+  delay(10);
   digitalWrite (ci_UltrasonicF_Data, LOW);//clear output
   delayMicroseconds(2);
 
@@ -336,54 +354,62 @@ int readUltrasonic()
   durationBack = pulseIn(ci_UltrasonicR_Ping, HIGH);
   distanceBack = durationBack * 0.034 / 2;
 
-  if ((distanceFront <= ci_distance_from_wall + 2) && (distanceFront >= ci_distance_from_wall - 2))
+  avgDistance = (distanceFront + distanceBack) / 2;
+  isDistanceOk = abs(avgDistance - ci_distance_from_wall) <= 2;
+  isParallel = abs(distanceFront - distanceBack) < 1;
+  isOvershoot = (distanceFront - distanceBack) > 1;
+}
+
+/*if (((distanceFront+distanceBack/2) <= ci_distance_from_wall + 2) && ((distanceFront+distanceBack/2) >= ci_distance_from_wall - 2))
   {
-    if ((distanceFront - distanceBack) > 1)
-      return 1;
+  if ((distanceFront - distanceBack) > 0.5)
+    return 1;
 
-    else if (distanceBack - distanceFront > 1)
-      return 2;
+  else if (distanceBack - distanceFront > 0.5)
+    return 2;
 
-    else if (ui_Robot_State_Index == 2)
-      return 3;
-
-    else
-      return 3;
-  }
-
-  else if (distanceFront < ci_distance_from_wall - 2)
-  {
-    if (distanceBack - distanceFront > 1)
-      return 2;
-
-    else if ((distanceFront - distanceBack) > 1)
-      return 3;
-
-    else if (ui_Robot_State_Index == 2)
-      return 3;
-
-    else
-      return 2;
-  }
+  else if (ui_Robot_State_Index == 2)
+    return 4;
 
   else
-  {
-    if ((distanceFront - distanceBack) > 1)
-      return 1;
-
-    else if (distanceBack - distanceFront > 1)
-      return 3;
-
-    else if (ui_Robot_State_Index == 2)
-      return 3;
-
-    else
-      return 1;
+    return 3;
   }
 
-}
+  else if ((distanceFront+distanceBack/2) < ci_distance_from_wall - 2)
+  {
+  if (distanceBack - distanceFront > 0.5)
+    return 2;
+
+  else if ((distanceFront - distanceBack) > 0.5)
+    return 3;
+
+  else if (ui_Robot_State_Index == 2)
+    return 4;
+
+  else
+    return 2;
+  }
+
+  else    //too far away
+  {
+  if ((distanceFront - distanceBack) > 0.5)
+    return 1;
+
+  else if (distanceBack - distanceFront > 0.5)
+    return 3;
+
+  else if (ui_Robot_State_Index == 2)
+    return 4;
+
+  else
+    return 1;
+  }
+
+  }*/
+
 int readUltrasonicT ()
 {
+  delay(10);
   digitalWrite (ci_UltrasonicT_Trig, LOW);//clear output
   delayMicroseconds(2);
 
@@ -395,44 +421,65 @@ int readUltrasonicT ()
   distanceT = durationT * 0.034 / 2; //0.034 speed of sound, 2 for signal reflection
   //Serial.println (distanceT);
 
-  if (distanceT <= 30)
-  {
-      return 1;
-  }
-
-  else if (distanceT > 55)
-  {
-    return 2;
-  }
-
-  //delay(10);
-
+  isWallAhead = distanceT <= 30;
 }
 
 void turnRight()
 {
   ui_Left_Motor_Speed = 2100;
-  ui_Right_Motor_Speed = 1600;
+  ui_Right_Motor_Speed = 1550;
 
-  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  //servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+  //servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
 }
 
 void turnLeft ()
 {
-  ui_Left_Motor_Speed = 1600;
+  ui_Left_Motor_Speed = 1550;
   ui_Right_Motor_Speed = 2100;
 
-  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  //servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+  //servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
 }
 
 void goStraight()
 {
+  //Serial.println("going straight dude");
   ui_Left_Motor_Speed = 1800;
   ui_Right_Motor_Speed = 1800;
 
-  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  //servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+  //servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+}
+
+void stayParallel ()
+{
+  readUltrasonic();
+
+  if ((distanceFront - distanceBack) > 1)
+    turnRight();
+
+  else if ((distanceBack - distanceFront) > 1)
+    turnLeft();
+
+  else
+    goStraight();
+}
+
+void keepDistance()
+{
+  readUltrasonic();
+
+  if (abs(avgDistance - ci_distance_from_wall) <= 1) //just right
+  {
+    goStraight();
+    Serial.println("going straight dude");
+  }
+
+  else if (avgDistance > (ci_distance_from_wall + 1)) //too far
+    turnRight();
+
+  else //too close
+    turnLeft();
 }
 
